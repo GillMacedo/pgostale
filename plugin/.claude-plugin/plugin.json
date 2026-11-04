@@ -1,0 +1,22 @@
+{
+  "name": "pgostale",
+  "version": "0.1.0",
+  "description": "Check whether a Go PGO profile (default.pgo) still matches the code: the share of hot call weight the compiler still matches, and which functions and call sites were lost to renames, moves and edits.",
+  "author": {
+    "name": "Giulliano Macedo",
+    "url": "https://github.com/GillMacedo"
+  },
+  "homepage": "https://github.com/GillMacedo/pgostale",
+  "repository": "https://github.com/GillMacedo/pgostale",
+  "license": "MIT",
+  "keywords": [
+    "go",
+    "golang",
+    "pgo",
+    "profile-guided-optimization",
+    "default-pgo",
+    "pprof",
+    "performance",
+    "ci"
+  ]
+}

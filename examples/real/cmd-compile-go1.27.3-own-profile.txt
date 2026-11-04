@@ -1,0 +1,34 @@
+Profile /usr/local/go/src/cmd/compile/default.pgo on cmd/compile
+Profile: 4970 call edges, 4678 hot, total weight 29277.
+In this module: 53.3% of the weight (3179 hot edges). Standard library and other modules: 40.9%, not checked. Calls to compiler-inserted runtime helpers: 5.8%, skipped.
+
+Still matches: 99.1% of this module's hot weight (3126 of 3179 hot edges), 99.1% of all its weight.
+
+Functions in the profile that this build doesn't have:
+  cmd/compile/internal/ssa.addLocalFacts  weight 26 (0.1%), 8 hot edges
+      renamed, removed, or has no calls left
+  cmd/compile/internal/ssa.simplifyBlock  weight 4 (0.0%), 3 hot edges
+      probably now cmd/compile/internal/ssa.(*factsTable).simplifyBlock, with the same name and a different receiver
+
+Call sites that moved or changed in functions that still exist:
+  cmd/compile/internal/ssa.prove +147 -> cmd/compile/internal/ssa.simplifyBlock  weight 23 (0.1%), hot
+      no call at internal/ssa/prove.go:1720 now
+  cmd/compile/internal/ssa.prove +133 -> cmd/compile/internal/ssa.addLocalFacts  weight 10 (0.0%), hot
+      no call at internal/ssa/prove.go:1706 now
+  cmd/compile/internal/ssa.prove +148 -> cmd/compile/internal/ssa.(*factsTable).restore  weight 7 (0.0%), hot
+      no call at internal/ssa/prove.go:1721 now
+  cmd/compile/internal/ssa.(*knownBitsState).fold +142 -> cmd/compile/internal/ssa.(*knownBitsState).fold.func1  weight 7 (0.0%), hot
+      no call at internal/ssa/known_bits.go:154 now
+  cmd/compile/internal/typecheck.typecheck +21 -> cmd/compile/internal/typecheck.typecheck.func1  weight 6 (0.0%), hot
+      no call at internal/typecheck/typecheck.go:170 now
+  cmd/compile/internal/noder.(*reader).method +9 -> cmd/compile/internal/ir.NewFunc  weight 6 (0.0%), hot
+      internal/noder/reader.go:1143 calls signature now; the compiler still treats it as this hot call site
+  cmd/compile/internal/ssa.liveValues +101 -> cmd/compile/internal/ssa.(*Cache).freeValueSlice  weight 4 (0.0%), hot
+      no call at internal/ssa/deadcode.go:157 now
+  cmd/compile/internal/noder.(*reader).expr +453 -> cmd/compile/internal/noder.(*reader).expr.func1  weight 4 (0.0%), hot
+      no call at internal/noder/reader.go:2659 now
+  cmd/compile/internal/slice.analyze.func4 +102 -> cmd/compile/internal/ir.DoChildren  weight 4 (0.0%), hot
+      no call at internal/slice/slice.go:404 now
+  cmd/compile/internal/slice.analyze.func4 +82 -> cmd/compile/internal/slice.analyze.func3  weight 4 (0.0%), hot
+      no call at internal/slice/slice.go:384 now
+  ... 32 more (use --limit 0 or --json)

@@ -1,0 +1,14 @@
+{
+  "name": "pgostale-marketplace",
+  "description": "Marketplace for pgostale, which checks whether a Go PGO profile (default.pgo) still matches the code.",
+  "owner": {
+    "name": "Giulliano Macedo"
+  },
+  "plugins": [
+    {
+      "name": "pgostale",
+      "source": "./plugin",
+      "description": "Check whether a Go PGO profile (default.pgo) still matches your code after refactors, and see which hot call sites the compiler can no longer use."
+    }
+  ]
+}

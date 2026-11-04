@@ -1,0 +1,32 @@
+Profile gojq-v0.12.17.pprof on github.com/itchyny/gojq/cmd/gojqprof
+Profile: 359 call edges, 343 hot, total weight 1654.
+In this module: 8.1% of the weight (35 hot edges). Standard library and other modules: 90.9%, not checked. Calls to compiler-inserted runtime helpers: 1.0%, skipped.
+
+Still matches: 62.7% of this module's hot weight (19 of 35 hot edges), 62.7% of all its weight.
+Below the minimum of 90%: the profile is stale for this code. Collect a new one from the current build.
+
+Functions in the profile that this build doesn't have:
+  github.com/itchyny/gojq.normalizeNumbers  weight 18 (1.1%), 3 hot edges
+      renamed, removed, or has no calls left
+  github.com/itchyny/gojq.binopTypeSwitch  weight 9 (0.5%), 2 hot edges
+      now a generic function, github.com/itchyny/gojq.binopTypeSwitch[...]
+  github.com/itchyny/gojq.normalizeNumber  weight 4 (0.2%), 3 hot edges
+      probably renamed to github.com/itchyny/gojq.parseNumber, which makes the same calls at the same lines
+
+Call sites that moved or changed in functions that still exist:
+  github.com/itchyny/gojq.(*env).Next +301 -> github.com/itchyny/gojq.(*env).pushfork  weight 5 (0.3%), hot
+      execute.go:323 calls push now; the compiler still treats it as this hot call site
+  github.com/itchyny/gojq.funcJoin +30 -> strings.Join  weight 4 (0.2%), hot
+      no call at func.go:796 now
+  github.com/itchyny/gojq.(*env).Next +239 -> github.com/itchyny/gojq.(*env).popscope  weight 3 (0.2%), hot
+      execute.go:261 calls empty now; the compiler still treats it as this hot call site
+  github.com/itchyny/gojq.(*env).Next +228 -> github.com/itchyny/gojq.(*scopeStack).push  weight 3 (0.2%), hot
+      no call at execute.go:250 now
+  github.com/itchyny/gojq.(*env).Next +300 -> github.com/itchyny/gojq.(*env).push  weight 1 (0.1%), hot
+      no call at execute.go:322 now
+  github.com/itchyny/gojq.(*Code).RunWithContext +9 -> github.com/itchyny/gojq.normalizeNumbers  weight 1 (0.1%), hot
+      no call at compiler.go:55 now
+  github.com/itchyny/gojq.Compare.func4 +2 -> github.com/itchyny/gojq.Compare  weight 1 (0.1%), hot
+      no call at this offset now; closures are numbered by position, so this may be a different closure
+  github.com/itchyny/gojq.funcAdd +51 -> github.com/itchyny/gojq.funcOpAdd  weight 1 (0.1%), hot
+      no call at func.go:437 now

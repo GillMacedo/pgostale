@@ -1,0 +1,37 @@
+// Command gojqprof runs the gojq CLI in a loop on a fixed input and writes
+// a CPU profile. It exists only to record a PGO profile for pgostale's tests.
+package main
+
+import (
+	"os"
+	"runtime/pprof"
+	"time"
+
+	"github.com/itchyny/gojq/cli"
+)
+
+func main() {
+	prof, input, filter := os.Args[1], os.Args[2], os.Args[3]
+	f, err := os.Create(prof)
+	if err != nil {
+		panic(err)
+	}
+	pprof.StartCPUProfile(f)
+	devnull, _ := os.Open(os.DevNull)
+	devnull, _ = os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	end := time.Now().Add(10 * time.Second)
+	for time.Now().Before(end) {
+		in, err := os.Open(input)
+		if err != nil {
+			panic(err)
+		}
+		os.Stdin, os.Stdout = in, devnull
+		os.Args = []string{"gojq", filter}
+		if code := cli.Run(); code != 0 {
+			panic(code)
+		}
+		in.Close()
+	}
+	pprof.StopCPUProfile()
+	f.Close()
+}

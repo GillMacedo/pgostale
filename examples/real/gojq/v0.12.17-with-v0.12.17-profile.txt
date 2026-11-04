@@ -1,0 +1,6 @@
+Profile gojq-v0.12.17.pprof on github.com/itchyny/gojq/cmd/gojqprof
+Profile: 359 call edges, 343 hot, total weight 1654.
+In this module: 8.1% of the weight (35 hot edges). Standard library and other modules: 90.9%, not checked. Calls to compiler-inserted runtime helpers: 1.0%, skipped.
+
+Still matches: 100.0% of this module's hot weight (35 of 35 hot edges), 100.0% of all its weight.
+Every call edge in this module still matches the code.

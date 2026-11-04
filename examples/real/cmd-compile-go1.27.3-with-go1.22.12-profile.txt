@@ -1,0 +1,52 @@
+Profile /home/builder/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.22.12.linux-arm64/src/cmd/compile/default.pgo on cmd/compile
+Profile: 3189 call edges, 3051 hot, total weight 13877.
+In this module: 48.9% of the weight (2021 hot edges). Standard library and other modules: 43.6%, not checked. Calls to compiler-inserted runtime helpers: 7.5%, skipped.
+
+Still matches: 67.3% of this module's hot weight (1323 of 2021 hot edges), 67.3% of all its weight.
+Below the minimum of 90%: the profile is stale for this code. Collect a new one from the current build.
+
+Functions in the profile that this build doesn't have:
+  cmd/compile/internal/ssa.decomposeBuiltIn  weight 47 (0.3%), 3 hot edges
+      probably renamed to cmd/compile/internal/ssa.decomposeBuiltin, which makes the same calls at the same lines
+  cmd/compile/internal/ssa.sortvalues.Less  weight 34 (0.2%), 1 hot edge
+      renamed, removed, or has no calls left
+  cmd/compile/internal/ssagen.byStackVar.Less  weight 12 (0.1%), 1 hot edge
+      renamed, removed, or has no calls left
+  cmd/compile/internal/liveness.(*liveness).epilogue  weight 12 (0.1%), 6 hot edges
+      probably now cmd/compile/internal/liveness.(*Liveness).epilogue, with the same name and a different receiver
+  cmd/compile/internal/types2.(*Scope).LookupParent  weight 11 (0.1%), 2 hot edges
+      renamed, removed, or has no calls left
+  cmd/compile/internal/dwarfgen.createComplexVars  weight 11 (0.1%), 3 hot edges
+      renamed, removed, or has no calls left
+  cmd/compile/internal/ssa.(*poset).newconst  weight 10 (0.1%), 3 hot edges
+      renamed, removed, or has no calls left
+  cmd/compile/internal/ssa.layoutRegallocOrder  weight 8 (0.1%), 1 hot edge
+      renamed, removed, or has no calls left
+  cmd/compile/internal/liveness.(*liveness).compact  weight 8 (0.1%), 5 hot edges
+      probably now cmd/compile/internal/liveness.(*Liveness).compact, with the same name and a different receiver
+  cmd/compile/internal/ssa.(*Cache).allocInt64Slice  weight 6 (0.0%), 1 hot edge
+      renamed, removed, or has no calls left
+  ... 29 more (use --limit 0 or --json)
+
+Call sites that moved or changed in functions that still exist:
+  cmd/compile/internal/ssa.(*regAllocState).init +111 -> cmd/compile/internal/ssa.(*regAllocState).computeLive  weight 143 (1.0%), hot
+      no call at internal/ssa/regalloc.go:857 now
+  cmd/compile/internal/ssagen.buildssa +282 -> cmd/compile/internal/ssa.Compile  weight 73 (0.5%), hot
+      no call at internal/ssagen/ssa.go:576 now
+  cmd/compile/internal/ssa.(*stackAllocState).init +24 -> cmd/compile/internal/ssa.(*stackAllocState).computeLive  weight 42 (0.3%), hot
+      no call at internal/ssa/stackalloc.go:137 now
+  cmd/internal/obj/x86.(*AsmBuf).doasm +83 -> cmd/internal/obj/x86.(*ytab).match  weight 41 (0.3%), hot
+      no call at /usr/local/go/src/cmd/internal/obj/x86/asm6.go:4313 now
+  cmd/compile/internal/ssa.phielim +5 -> cmd/compile/internal/ssa.copyelimValue  weight 28 (0.2%), hot
+      no call at internal/ssa/copyelim.go:105 now
+  cmd/compile/internal/ssa.copyelim +5 -> cmd/compile/internal/ssa.copyelimValue  weight 26 (0.2%), hot
+      no call at internal/ssa/copyelim.go:15 now
+  cmd/compile/internal/ssa.rewriteValuegeneric +169 -> cmd/compile/internal/ssa.rewriteValuegeneric_OpLoad  weight 25 (0.2%), hot
+      internal/ssa/rewritegeneric.go:180 calls rewriteValuegeneric_OpLess32F now; the compiler still treats it as this hot call site
+  cmd/compile/internal/ssa.elimDeadAutosGeneric +130 -> cmd/compile/internal/ssa.elimDeadAutosGeneric.func1  weight 24 (0.2%), hot
+      no call at internal/ssa/deadstore.go:374 now
+  cmd/compile/internal/ssa.BuildFuncDebug +113 -> cmd/compile/internal/ssa.(*debugState).liveness  weight 21 (0.2%), hot
+      no call at internal/ssa/debug.go:671 now
+  cmd/compile/internal/ssa.applyRewrite +101 -> cmd/compile/internal/ssa.rewriteValueAMD64  weight 21 (0.2%), hot
+      no call at internal/ssa/rewrite.go:142 now
+  ... 621 more (use --limit 0 or --json)

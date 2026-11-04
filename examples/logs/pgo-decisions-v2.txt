@@ -1,0 +1,3 @@
+hot-budget check allows inlining for call main.Run (cost 331) at ./main.go:38:11 in function main.main
+hot-budget check allows inlining for call strings.ToLower (cost 355) at parse/parse.go:33:24 in function example.com/ledger/parse.normalize
+hot-budget check allows inlining for call strings.TrimSpace (cost 195) at parse/parse.go:33:42 in function example.com/ledger/parse.normalize

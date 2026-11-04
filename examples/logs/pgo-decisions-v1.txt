@@ -1,0 +1,13 @@
+./main.go:88:10: PGO devirtualizing interface call h.Write to fnv.(*sum64a).Write
+book/book.go:59:19: PGO devirtualizing interface call r.Adjust to LimitRule.Adjust
+hot-budget check allows inlining for call example.com/ledger/book.(*Book).Apply (cost 191) at ./main.go:73:10 in function main.Run.func1
+hot-budget check allows inlining for call example.com/ledger/parse.normalize (cost 556) at parse/parse.go:28:28 in function example.com/ledger/parse.ParseLine
+hot-budget check allows inlining for call example.com/ledger/parse.normalize (cost 556) at parse/parse.go:28:53 in function example.com/ledger/parse.ParseLine
+hot-budget check allows inlining for call main.Digest (cost 195) at ./main.go:40:16 in function main.main
+hot-budget check allows inlining for call main.Run (cost 418) at ./main.go:39:11 in function main.main
+hot-budget check allows inlining for call main.Run.func1 (cost 271) at ./main.go:77:8 in function main.Run
+hot-budget check allows inlining for call strconv.ParseInt (cost 582) at parse/parse.go:24:28 in function example.com/ledger/parse.ParseLine
+hot-budget check allows inlining for call strings.Split (cost 854) at parse/parse.go:20:24 in function example.com/ledger/parse.ParseLine
+hot-budget check allows inlining for call strings.ToLower (cost 355) at parse/parse.go:32:24 in function example.com/ledger/parse.normalize
+hot-budget check allows inlining for call strings.TrimSpace (cost 195) at parse/parse.go:24:46 in function example.com/ledger/parse.ParseLine
+hot-budget check allows inlining for call strings.TrimSpace (cost 195) at parse/parse.go:32:42 in function example.com/ledger/parse.normalize

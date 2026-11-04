@@ -1,0 +1,30 @@
+[
+  {
+    "skills": ["checking-go-pgo-profiles"],
+    "query": "Is our default.pgo still any good? We refactored a lot since it was collected.",
+    "expected_behavior": [
+      "Finds the main packages with a default.pgo and runs pgostale.go check on each from inside the module",
+      "Reports the match share and the largest lost functions or call sites with their causes",
+      "Recommends collecting a new CPU profile from the current build if the match is below 90%",
+      "Doesn't claim a measured slowdown"
+    ]
+  },
+  {
+    "skills": ["checking-go-pgo-profiles"],
+    "query": "I made default.pgo with go test -bench . -cpuprofile in package main. Will PGO use it?",
+    "expected_behavior": [
+      "Runs pgostale.go check with the profile",
+      "Explains that the test binary names package main by its import path, so those functions don't match the real binary",
+      "Suggests collecting the profile from the built program instead"
+    ]
+  },
+  {
+    "skills": ["checking-go-pgo-profiles"],
+    "query": "pgostale says 100%. So PGO is working as well as it can, right?",
+    "expected_behavior": [
+      "Explains that only edges with callers in the module are checked",
+      "Explains that matching doesn't show whether the profile represents production load or how much time PGO saves",
+      "Suggests benchmarking with and without -pgo=off"
+    ]
+  }
+]
