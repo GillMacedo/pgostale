@@ -2,7 +2,7 @@
 
     profile file --> ReadProfile (gzip, pprof protobuf) --> call edges, sorted by weight --> hot edges (99% CDF)
     package      --> go list (package, deps, module) --> go build -pgo=PROFILE -gcflags=MODULE/...=-d=pgodebug=3 -o /dev/null
-                     --> ParseCallSites (JSON lines) --> Match (with source files) --> Report --> text or JSON
+                     --> ParseCallSites (JSON lines) --> Match (with source files) --> Report --> text, JSON or Markdown
 
 - **ReadProfile** decodes the pprof protobuf with a small reader of its own, so the tool stays one standard-library file. It reduces samples to call edges the way `cmd/internal/pgo` does: only the two innermost stack locations count, inline frames are expanded, and an edge is keyed by caller name, callee name and the call's line offset from the caller's `func` line. A test checks the result against `go tool preprofile` on real profiles, including the Go compiler's own `default.pgo`. Anything that isn't a CPU profile with enough samples is refused. Every cut point of a real profile is tested.
 - **The compiler is the matcher.** With `-d=pgodebug=3`, the compiler prints one JSON line per call in every function it compiles: the caller, the position, and the profile weight it matched at that caller and line offset. This is the same lookup PGO inlining and devirtualization use, so pgostale doesn't re-implement Go's symbol naming for methods, closures or generics. The flag applies only to the module's packages.
@@ -10,5 +10,7 @@
 - **Match** groups the profile's edges by caller. A caller the compiler never printed is missing. For a caller it did print, the function's first line comes from the source (`go/parser`) when it agrees with the compiler's weights, or is solved from the lines that matched. Each edge is then matched or lost. For a matched line, the call's name at the compiler's column is read from the source and compared with the profile's callee, which finds lines where the compiler applies a hot call site to a different call. Deferred calls are exempt, because the profile places them on a return line.
 - **Hints** for missing callers compare names: `main.X` against the main package's import path (a `go test` profile), value against pointer receivers, the same name in another package, closure suffixes, a function with the same base name, and a function that makes the same calls at the same offsets.
 - **Refusals** (exit 2, nothing on stdout): empty, garbage, cut-off or non-CPU profiles, the `go tool preprofile` text format, fewer than 20 samples in call edges, a failed `go list` or `go build`, no compiler call site data, no edges in the module, and no edge in the module still matching.
+
+Markdown is a presentation of the same report, with separate bounded tables for missing functions, moved call sites and changed calls. It escapes profile-derived names and paths; `--limit 0` shows all rows. `--json` and `--markdown` are mutually exclusive. Neither output changes matching or measures a slowdown.
 
 Key choices are in `decisions/`.
