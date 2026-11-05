@@ -23,6 +23,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"html"
 	"io"
 	"math"
 	"os"
@@ -1608,6 +1609,80 @@ func WriteText(w io.Writer, r *Report, limit int) {
 	}
 }
 
+// WriteMarkdown prints a bounded report suitable for a pull request comment.
+func WriteMarkdown(w io.Writer, r *Report, limit int) {
+	fmt.Fprintln(w, "## PGO profile match")
+	fmt.Fprintf(w, "\nProfile: %s. Package: %s.\n", markdownCell(r.Profile), markdownCell(r.Package))
+	if r.ScoreBasis == "hot" {
+		fmt.Fprintf(w, "\nStill matches: **%.1f%%** of this module's hot weight (%d of %d hot edges), %.1f%% of all its weight.\n",
+			r.Score, r.HotMatched, r.HotEdges, pct(r.Matched, r.Module))
+	} else {
+		fmt.Fprintf(w, "\nStill matches: **%.1f%%** of this module's weight. None of its edges is hot.\n", r.Score)
+	}
+	fmt.Fprintf(w, "\nChecked module weight: %.1f%% of the profile; %.1f%% is outside the module and %.1f%% is compiler-inserted, not checked.\n",
+		pct(r.Module, r.Total), pct(r.Outside, r.Total), pct(r.Inserted, r.Total))
+	if r.Module < 50 {
+		fmt.Fprintf(w, "\nOnly %d of the profile's weight is in this module, so this result rests on little data.\n", r.Module)
+	}
+	if r.Below {
+		fmt.Fprintf(w, "\nBelow the minimum of %.0f%%: collect a new profile from the current build.\n", r.Min)
+	}
+	fmt.Fprintln(w, "\nThis reports compiler profile matching, not a measured slowdown.")
+	fmt.Fprintln(w, "\n### Missing functions\n\n| Function | Weight (% of profile) | Hot edges | Hint |\n| --- | --- | --- | --- |")
+	for i, m := range r.Missing {
+		if limit > 0 && i == limit {
+			break
+		}
+		fmt.Fprintf(w, "| %s | %d (%.1f%%) | %d | %s |\n", markdownCell(m.Name), m.Weight, pct(m.Weight, r.Total), m.HotEdges, markdownCell(m.Hint))
+	}
+	markdownRemainder(w, len(r.Missing), limit)
+	var moved, changed []LostEdge
+	for _, edge := range r.Lost {
+		switch edge.Reason {
+		case "function-missing":
+			// Already listed in the missing-functions table.
+		case "callee-changed":
+			changed = append(changed, edge)
+		default:
+			moved = append(moved, edge)
+		}
+	}
+	for _, section := range []struct {
+		title string
+		edges []LostEdge
+	}{{"Moved call sites", moved}, {"Calls that changed", changed}} {
+		fmt.Fprintf(w, "\n### %s\n\n| Caller | Offset | Callee | Weight (%% of profile) | Hot | Location | Current call |\n| --- | --- | --- | --- | --- | --- | --- |\n", section.title)
+		for i, edge := range section.edges {
+			if limit > 0 && i == limit {
+				break
+			}
+			fmt.Fprintf(w, "| %s | +%d | %s | %d (%.1f%%) | %t | %s | %s |\n",
+				markdownCell(edge.Caller), edge.Offset, markdownCell(edge.Callee), edge.Weight, pct(edge.Weight, r.Total), edge.Hot, markdownCell(relPath(edge.Where)), markdownCell(edge.Now))
+		}
+		markdownRemainder(w, len(section.edges), limit)
+	}
+	if len(changed) > 0 {
+		fmt.Fprintln(w, "\nFor changed calls, the compiler still treats the location as this hot call site.")
+	}
+	if len(r.Unresolved) > 0 {
+		fmt.Fprintf(w, "\nCould not line up the compiler's call sites for %s; their edges were matched by weight only.\n", markdownCell(strings.Join(r.Unresolved, ", ")))
+	}
+}
+
+func markdownRemainder(w io.Writer, total, limit int) {
+	if total == 0 {
+		fmt.Fprintln(w, "\nNone.")
+	} else if limit > 0 && total > limit {
+		fmt.Fprintf(w, "\n%d more (use --limit 0 or --json).\n", total-limit)
+	}
+}
+
+// Escape data before placing it in a Markdown paragraph or table cell.
+func markdownCell(s string) string {
+	return strings.NewReplacer("\\", "\\\\", "|", "\\|", "`", "\\`", "*", "\\*", "_", "\\_", "[", "\\[", "]", "\\]", "~", "\\~",
+		"\r\n", "<br>", "\r", "<br>", "\n", "<br>").Replace(html.EscapeString(s))
+}
+
 // relPath shortens an absolute path under the working directory.
 func relPath(p string) string {
 	wd, err := os.Getwd()
@@ -1643,7 +1718,7 @@ func WriteEdges(w io.Writer, ep *EdgeProfile, top int) {
 const usage = `pgostale checks whether a Go PGO profile still matches your code.
 
 Usage:
-  pgostale check [--profile FILE] [--min PCT] [--fail] [--json] [--limit N] [--save FILE] [-C DIR] [PACKAGE]
+  pgostale check [--profile FILE] [--min PCT] [--fail] [--json | --markdown] [--limit N] [--save FILE] [-C DIR] [PACKAGE]
   pgostale edges [--top N] [--json] PROFILE
   pgostale version
 
@@ -1707,9 +1782,14 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	minPct := fs.Float64("min", 90, "minimum share of hot weight that must still match, in `percent`")
 	fail := fs.Bool("fail", false, "exit 1 when the match is below --min")
 	asJSON := fs.Bool("json", false, "print the full report as JSON")
+	asMarkdown := fs.Bool("markdown", false, "print the report as Markdown tables")
 	limit := fs.Int("limit", 15, "list at most `n` entries per section, 0 for all")
 	pos, err := parseInterspersed(fs, args)
 	if err != nil {
+		return 2
+	}
+	if *asJSON && *asMarkdown {
+		fmt.Fprintln(stderr, "pgostale check: --markdown and --json cannot be combined")
 		return 2
 	}
 	if len(pos) > 1 {
@@ -1735,6 +1815,8 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "  ")
 		enc.Encode(rep)
+	} else if *asMarkdown {
+		WriteMarkdown(stdout, rep, *limit)
 	} else {
 		WriteText(stdout, rep, *limit)
 	}

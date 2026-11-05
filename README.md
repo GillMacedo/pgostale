@@ -140,12 +140,13 @@ Some findings, checked against both source trees: `decomposeBuiltIn` was renamed
 
 ## Usage
 
-    pgostale check [--profile FILE] [--min PCT] [--fail] [--json] [--limit N] [--save FILE] [-C DIR] [PACKAGE]
+    pgostale check [--profile FILE] [--min PCT] [--fail] [--json | --markdown] [--limit N] [--save FILE] [-C DIR] [PACKAGE]
     pgostale edges [--top N] [--json] PROFILE
 
 - `check` builds `PACKAGE` (default `.`, normally the main package) with `go build -pgo=PROFILE -o /dev/null` and the compiler's PGO debug output turned on for your module's packages. The profile defaults to `default.pgo` in the package directory, which is what `go build` uses.
 - `--min` is the share of hot weight that must still match, 90 by default. `--fail` exits 1 when the match is below it.
-- `--json` prints the full result, including every lost edge. `--limit` caps each text section, 15 by default, 0 for all.
+- `--json` prints the full result, including every lost edge. `--markdown` prints the match share and separate tables for missing functions, moved call sites and changed calls, suitable for a pull request comment. These two output formats cannot be combined.
+- `--limit` caps each text or Markdown section, 15 by default, 0 for all. Markdown escapes names and paths so they stay inside their table cells. The report describes compiler profile matching, not a measured slowdown.
 - `--save FILE` keeps the build output with the compiler's per-call-site JSON lines.
 - `-C DIR` runs in another directory, like `go -C`. A relative `--profile` path is still read from the current directory.
 - Exit code 2 means it couldn't check, and nothing is printed on stdout: an empty, cut-off or non-CPU profile, too few samples, a package that doesn't build, or a profile with nothing in the module that still matches.
