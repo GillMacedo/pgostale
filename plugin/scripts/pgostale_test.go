@@ -705,6 +705,85 @@ func TestEdgesCallerRefusals(t *testing.T) {
 	}
 }
 
+func TestCheckMarkdownRealLedger(t *testing.T) {
+	var out, errb bytes.Buffer
+	args := []string{"check", "-C", "../../examples/ledger/v2", "--profile", realProfiles[0], "--markdown", "--limit", "1", "--fail"}
+	if code := run(args, &out, &errb); code != 1 {
+		t.Fatalf("exit %d, want stale exit 1: %s", code, errb.String())
+	}
+	for _, want := range []string{"Still matches:", "### Missing functions", "| Function |", "### Moved call sites", "### Calls that changed", "| Caller | Offset | Callee |", "main.Digest", "Adjust", "more (use --limit 0 or --json)", "not a measured slowdown"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %q in Markdown:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "parse.ParseLine") {
+		t.Error("--limit 1 did not bound the missing-functions table")
+	}
+}
+
+func TestMarkdownFormatRefusals(t *testing.T) {
+	for _, args := range [][]string{
+		{"check", "--markdown", "--json"},
+		{"check", "--json", "--markdown"},
+		{"check", "--markdown", "--profile"},
+	} {
+		var out, errb bytes.Buffer
+		if code := run(args, &out, &errb); code != 2 || out.Len() != 0 || errb.Len() == 0 {
+			t.Errorf("%v: exit %d, stdout %q, stderr %q", args, code, out.String(), errb.String())
+		}
+	}
+	real := readFile(t, realProfiles[0])
+	for name, data := range map[string][]byte{"empty": {}, "garbage": []byte("not a profile"), "cut-off": real[:len(real)/2]} {
+		t.Run(name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "broken.pprof")
+			if err := os.WriteFile(file, data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var out, errb bytes.Buffer
+			if code := run([]string{"check", "--markdown", "--profile", file}, &out, &errb); code != 2 || out.Len() != 0 || errb.Len() == 0 {
+				t.Errorf("exit %d, stdout %q, stderr %q", code, out.String(), errb.String())
+			}
+		})
+	}
+}
+
+func TestMarkdownEscapesData(t *testing.T) {
+	value := "a|`[*_<tag>&\\\r\nnext"
+	r := &Report{Profile: value, Package: value, Total: 100, Module: 100, Missing: []MissingFunc{{Name: value, Hint: value}}, Lost: []LostEdge{{Edge: Edge{Caller: value, Callee: value}, Reason: "callee-changed", Now: value}}}
+	var out bytes.Buffer
+	WriteMarkdown(&out, r, 0)
+	want := "a\\|\\`\\[\\*\\_&lt;tag&gt;&amp;\\\\<br>next"
+	if !strings.Contains(out.String(), want) || strings.Contains(out.String(), "<tag>") || strings.Contains(out.String(), "\r") {
+		t.Errorf("unsafe or corrupted cell:\n%s", out.String())
+	}
+}
+
+func TestMarkdownEmptyAndUnbounded(t *testing.T) {
+	var out bytes.Buffer
+	r := &Report{Total: 100, Module: 100, Score: 100}
+	WriteMarkdown(&out, r, 1)
+	if strings.Count(out.String(), "\nNone.") != 3 || strings.Contains(out.String(), "NaN") {
+		t.Fatalf("empty tables:\n%s", out.String())
+	}
+	for i := 0; i < 3; i++ {
+		r.Missing = append(r.Missing, MissingFunc{Name: fmt.Sprintf("missing%d", i)})
+		r.Lost = append(r.Lost, LostEdge{Edge: Edge{Caller: fmt.Sprintf("moved%d", i)}, Reason: "call-site-moved"})
+		r.Lost = append(r.Lost, LostEdge{Edge: Edge{Caller: fmt.Sprintf("changed%d", i)}, Reason: "callee-changed"})
+	}
+	out.Reset()
+	WriteMarkdown(&out, r, 0)
+	for _, want := range []string{"missing2", "moved2", "changed2"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("unbounded table missing %q", want)
+		}
+	}
+	out.Reset()
+	WriteMarkdown(&out, r, 1)
+	if strings.Count(out.String(), "2 more (use --limit 0 or --json)") != 3 {
+		t.Errorf("per-table limits:\n%s", out.String())
+	}
+}
+
 func TestEdgesCommand(t *testing.T) {
 	var out, errb bytes.Buffer
 	if code := run([]string{"edges", "--top", "3", realProfiles[0]}, &out, &errb); code != 0 {

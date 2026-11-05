@@ -14,7 +14,7 @@ Find the main packages that have a profile with `find . -name default.pgo -not -
     go run "${CLAUDE_PLUGIN_ROOT}/scripts/pgostale.go" check ./cmd/server
 
 - The profile defaults to `default.pgo` in the package directory. Use `--profile FILE` for a profile kept elsewhere, such as one passed with `go build -pgo=FILE`.
-- Add `--limit 0` to see every lost edge, or `--json` for the full result.
+- Add `--limit 0` to see every lost edge, or `--json` for the full result. Use `--markdown` instead of `--json` for bounded tables suitable for a pull request comment.
 - To inspect a caller's recorded edges, use `edges --caller PATTERN PROFILE`; the pattern is a literal, case-sensitive substring, such as `example.com/ledger/parse`. The text `--top` limit applies after selection; JSON includes all selected edges. The totals, percentages and hot markers still refer to the full profile.
 - To check a change in review, run it on the working tree. To compare with the base branch, run it on a checkout of the base as well. A profile that matched on the base and doesn't on the change was broken by the change.
 - Exit code 2 means the tool couldn't check: say why, from its message, and don't guess at a result. Common causes are a cut-off or empty profile, a heap profile instead of a CPU profile, and a package that doesn't build.

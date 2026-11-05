@@ -2,7 +2,6 @@
 
 ## Next
 - `--all` to also check profile edges whose caller is in the standard library or other modules, which shows drift after a Go or dependency upgrade
-- Markdown output for pull request comments
 - Check every main package that has a `default.pgo` in one run
 
 ## Later
