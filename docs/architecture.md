@@ -11,4 +11,6 @@
 - **Hints** for missing callers compare names: `main.X` against the main package's import path (a `go test` profile), value against pointer receivers, the same name in another package, closure suffixes, a function with the same base name, and a function that makes the same calls at the same offsets.
 - **Refusals** (exit 2, nothing on stdout): empty, garbage, cut-off or non-CPU profiles, the `go tool preprofile` text format, fewer than 20 samples in call edges, a failed `go list` or `go build`, no compiler call site data, no edges in the module, and no edge in the module still matching.
 
+`edges --caller PATTERN` is a display filter over the original weighted edges, using a literal case-sensitive caller substring. Ordering, total profile weight and hot-edge classification are retained; text limits apply after selection and JSON includes all selected edges. No matches is a valid empty listing, not an unreadable-profile refusal.
+
 Key choices are in `decisions/`.

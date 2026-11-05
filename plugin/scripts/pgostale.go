@@ -1622,19 +1622,52 @@ func relPath(p string) string {
 
 // WriteEdges prints the heaviest edges of a profile.
 func WriteEdges(w io.Writer, ep *EdgeProfile, top int) {
+	writeEdges(w, ep, top, "")
+}
+
+func writeEdges(w io.Writer, ep *EdgeProfile, top int, caller string) {
 	hot := len(ep.HotEdges())
 	fmt.Fprintf(w, "%s, %s, total weight %d\n", plural(len(ep.Edges), "call edge", "call edges"), plural(hot, "hot", "hot"), ep.Total)
+	matches := len(ep.Edges)
+	if caller != "" {
+		matches = 0
+		for _, edge := range ep.Edges {
+			if strings.Contains(edge.Caller, caller) {
+				matches++
+			}
+		}
+		fmt.Fprintf(w, "Caller contains %q: %s\n", caller, plural(matches, "matching call edge", "matching call edges"))
+	}
+	shown := 0
 	for i, e := range ep.Edges {
-		if top > 0 && i == top {
-			fmt.Fprintf(w, "... %d more\n", len(ep.Edges)-top)
+		if !strings.Contains(e.Caller, caller) {
+			continue
+		}
+		if top > 0 && shown == top {
+			fmt.Fprintf(w, "... %d more\n", matches-shown)
 			break
 		}
+		shown++
 		mark := " "
 		if i < hot {
 			mark = "*"
 		}
 		fmt.Fprintf(w, "%s %6.2f%%  %s +%d -> %s\n", mark, float64(e.Weight)/float64(ep.Total)*100, e.Caller, e.Offset, e.Callee)
 	}
+}
+
+// filterCaller preserves profile ordering and leaves the profile metadata intact.
+func filterCaller(edges []Edge, caller string) []Edge {
+	if caller == "" {
+		return edges
+	}
+	filtered := make([]Edge, 0)
+	for _, edge := range edges {
+		if strings.Contains(edge.Caller, caller) {
+			filtered = append(filtered, edge)
+		}
+	}
+	return filtered
 }
 
 // ---------------------------------------------------------------------------
@@ -1644,7 +1677,7 @@ const usage = `pgostale checks whether a Go PGO profile still matches your code.
 
 Usage:
   pgostale check [--profile FILE] [--min PCT] [--fail] [--json] [--limit N] [--save FILE] [-C DIR] [PACKAGE]
-  pgostale edges [--top N] [--json] PROFILE
+  pgostale edges [--top N] [--caller PATTERN] [--json] PROFILE
   pgostale version
 
 check builds PACKAGE (default ".") with the profile, the way go build -pgo
@@ -1748,6 +1781,7 @@ func runEdges(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("edges", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	top := fs.Int("top", 20, "show the `n` heaviest edges, 0 for all")
+	caller := fs.String("caller", "", "only show callers containing `pattern` (case-sensitive substring)")
 	asJSON := fs.Bool("json", false, "print all edges as JSON")
 	pos, err := parseInterspersed(fs, args)
 	if err != nil {
@@ -1775,9 +1809,9 @@ func runEdges(args []string, stdout, stderr io.Writer) int {
 			Total  int64  `json:"totalWeight"`
 			Hot    int    `json:"hotEdges"`
 			Edges  []Edge `json:"edges"`
-		}{ep.Format, ep.Total, len(ep.HotEdges()), ep.Edges})
+		}{ep.Format, ep.Total, len(ep.HotEdges()), filterCaller(ep.Edges, *caller)})
 		return 0
 	}
-	WriteEdges(stdout, ep, *top)
+	writeEdges(stdout, ep, *top, *caller)
 	return 0
 }
