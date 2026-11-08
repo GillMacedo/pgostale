@@ -141,12 +141,13 @@ Some findings, checked against both source trees: `decomposeBuiltIn` was renamed
 ## Usage
 
     pgostale check [--profile FILE] [--min PCT] [--fail] [--json] [--limit N] [--save FILE] [-C DIR] [PACKAGE]
-    pgostale edges [--top N] [--json] PROFILE
+    pgostale edges [--top N] [--caller PATTERN] [--json] PROFILE
 
 - `check` builds `PACKAGE` (default `.`, normally the main package) with `go build -pgo=PROFILE -o /dev/null` and the compiler's PGO debug output turned on for your module's packages. The profile defaults to `default.pgo` in the package directory, which is what `go build` uses.
 - `--min` is the share of hot weight that must still match, 90 by default. `--fail` exits 1 when the match is below it.
 - `--json` prints the full result, including every lost edge. `--limit` caps each text section, 15 by default, 0 for all.
 - `--save FILE` keeps the build output with the compiler's per-call-site JSON lines.
+- `edges --caller PATTERN` selects callers containing the literal, case-sensitive substring, for example `edges --caller example.com/ledger/parse examples/profiles/ledger-v1.pprof`. An empty pattern selects all callers; no matches succeeds with an empty list. `--top` limits the matching text rows, while `--json` keeps its existing behavior of returning every selected edge. Profile totals, percentages and hot markers still describe the whole profile, not a recalculated subset.
 - `-C DIR` runs in another directory, like `go -C`. A relative `--profile` path is still read from the current directory.
 - Exit code 2 means it couldn't check, and nothing is printed on stdout: an empty, cut-off or non-CPU profile, too few samples, a package that doesn't build, or a profile with nothing in the module that still matches.
 

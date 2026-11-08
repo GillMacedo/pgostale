@@ -584,6 +584,127 @@ func TestRunUsage(t *testing.T) {
 	}
 }
 
+func TestEdgesCallerFilter(t *testing.T) {
+	ep := mustProfile(t, realProfiles[0])
+	pattern := "example.com/ledger/parse"
+	var want []Edge
+	for _, edge := range ep.Edges {
+		if strings.HasPrefix(edge.Caller, pattern+".") {
+			want = append(want, edge)
+		}
+	}
+	if len(want) < 2 {
+		t.Fatal("real ledger profile needs multiple parse-package edges")
+	}
+	var out, errb bytes.Buffer
+	// Filter before --top, even though the global heaviest edge has another caller.
+	if code := run([]string{"edges", realProfiles[0], "--caller", pattern, "--top", "1"}, &out, &errb); code != 0 {
+		t.Fatalf("text exit %d: %s", code, errb.String())
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 4 || !strings.Contains(lines[2], want[0].Caller) || !strings.HasSuffix(lines[3], fmt.Sprintf("%d more", len(want)-1)) {
+		t.Errorf("filtered --top 1:\n%s", out.String())
+	}
+	out.Reset()
+	if code := run([]string{"edges", "--caller", "ledger/parse", "--json", "--top", "1", realProfiles[0]}, &out, &errb); code != 0 {
+		t.Fatalf("JSON exit %d: %s", code, errb.String())
+	}
+	var got struct {
+		Format string `json:"format"`
+		Total  int64  `json:"totalWeight"`
+		Hot    int    `json:"hotEdges"`
+		Edges  []Edge `json:"edges"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.Edges, want) || got.Format != ep.Format || got.Total != ep.Total || got.Hot != len(ep.HotEdges()) {
+		t.Errorf("filter changed profile metadata/order or failed substring matching: %+v", got)
+	}
+	// JSON has always listed all selected edges regardless of the text --top limit.
+	if len(got.Edges) < 2 {
+		t.Error("JSON was incorrectly truncated by --top")
+	}
+}
+
+func TestEdgesCallerNoMatchAndEmpty(t *testing.T) {
+	for _, pattern := range []string{"no-such-caller", "EXAMPLE.COM/LEDGER/PARSE"} {
+		var out, errb bytes.Buffer
+		if code := run([]string{"edges", "--json", "--caller", pattern, realProfiles[0]}, &out, &errb); code != 0 {
+			t.Fatalf("exit %d: %s", code, errb.String())
+		}
+		var got struct{ Edges []Edge }
+		if err := json.Unmarshal(out.Bytes(), &got); err != nil || got.Edges == nil || len(got.Edges) != 0 {
+			t.Errorf("no-match JSON must contain an empty array: %s (%v)", out.String(), err)
+		}
+		out.Reset()
+		if code := run([]string{"edges", "--caller", pattern, realProfiles[0]}, &out, &errb); code != 0 || !strings.Contains(out.String(), "0 matching call edges") {
+			t.Errorf("no-match text: exit %d: %s", code, out.String())
+		}
+	}
+	for _, format := range [][]string{nil, {"--json"}} {
+		var regular, empty, errb bytes.Buffer
+		args := append([]string{"edges", realProfiles[0]}, format...)
+		if code := run(args, &regular, &errb); code != 0 {
+			t.Fatalf("regular exit %d: %s", code, errb.String())
+		}
+		if code := run(append(args, "--caller="), &empty, &errb); code != 0 || regular.String() != empty.String() {
+			t.Errorf("empty caller changed normal output: exit %d", code)
+		}
+	}
+}
+
+func TestEdgesCallerKeepsGlobalHotness(t *testing.T) {
+	ep := mustProfile(t, realProfiles[0])
+	hot := len(ep.HotEdges())
+	if hot == len(ep.Edges) {
+		t.Fatal("real profile needs a cold edge")
+	}
+	var out bytes.Buffer
+	writeEdges(&out, ep, 0, ep.Edges[hot].Caller)
+	rows := strings.Split(strings.TrimSpace(out.String()), "\n")[2:]
+	var want []string
+	for i, edge := range ep.Edges {
+		if !strings.Contains(edge.Caller, ep.Edges[hot].Caller) {
+			continue
+		}
+		mark := " "
+		if i < hot {
+			mark = "*"
+		}
+		want = append(want, fmt.Sprintf("%s %6.2f%%  %s +%d -> %s", mark, float64(edge.Weight)/float64(ep.Total)*100, edge.Caller, edge.Offset, edge.Callee))
+	}
+	if !reflect.DeepEqual(rows, want) {
+		t.Errorf("filtered hotness/percentages changed: got %q, want %q", rows, want)
+	}
+	// The filter is literal, including regular-expression metacharacters.
+	if got := filterCaller([]Edge{{Caller: "f[x]"}, {Caller: "fx"}}, "["); len(got) != 1 || got[0].Caller != "f[x]" {
+		t.Errorf("not a literal substring: %+v", got)
+	}
+}
+
+func TestEdgesCallerRefusals(t *testing.T) {
+	for _, args := range [][]string{{"edges", "--caller"}, {"edges", "--caller", "parse"}, {"edges", "--caller", "parse", "/does/not/exist"}} {
+		var out, errb bytes.Buffer
+		if code := run(args, &out, &errb); code != 2 || out.Len() != 0 || errb.Len() == 0 {
+			t.Errorf("%v: exit %d, stdout %q, stderr %q", args, code, out.String(), errb.String())
+		}
+	}
+	real := readFile(t, realProfiles[0])
+	for name, data := range map[string][]byte{"empty": {}, "garbage": []byte("not a profile"), "cut-off": real[:len(real)/2]} {
+		t.Run(name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "broken.pprof")
+			if err := os.WriteFile(file, data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var out, errb bytes.Buffer
+			if code := run([]string{"edges", "--caller", "parse", file}, &out, &errb); code != 2 || out.Len() != 0 || errb.Len() == 0 {
+				t.Errorf("exit %d, stdout %q, stderr %q", code, out.String(), errb.String())
+			}
+		})
+	}
+}
+
 func TestEdgesCommand(t *testing.T) {
 	var out, errb bytes.Buffer
 	if code := run([]string{"edges", "--top", "3", realProfiles[0]}, &out, &errb); code != 0 {
