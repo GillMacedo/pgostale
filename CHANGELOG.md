@@ -4,6 +4,11 @@ All notable changes are documented here, in [Keep a Changelog](https://keepachan
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-08
+
+### Changed
+- Filter edge listings by caller substring (#7)
+
 ## [0.1.0] - 2026-11-04
 
 ### Added

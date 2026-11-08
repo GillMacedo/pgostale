@@ -1,6 +1,6 @@
 {
   "name": "pgostale",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Check whether a Go PGO profile (default.pgo) still matches the code: the share of hot call weight the compiler still matches, and which functions and call sites were lost to renames, moves and edits.",
   "author": {
     "name": "Giulliano Macedo",
