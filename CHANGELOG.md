@@ -4,6 +4,11 @@ All notable changes are documented here, in [Keep a Changelog](https://keepachan
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-14
+
+### Added
+- Add Markdown output for check reports (#6)
+
 ## [0.1.1] - 2026-11-08
 
 ### Changed
