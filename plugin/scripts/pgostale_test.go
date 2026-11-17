@@ -323,7 +323,7 @@ func (l *L[E]) Push(e E) {}
 `
 	file := filepath.Join(dir, "p.go")
 	os.WriteFile(file, []byte(src), 0o644)
-	fs := newFileSource("")
+	fs := newFileSource("", nil)
 	for name, line := range map[string]int{
 		"ex/p.F":              3,
 		"ex/p.G[...]":         5,

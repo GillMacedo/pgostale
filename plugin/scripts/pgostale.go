@@ -1140,10 +1140,11 @@ func renamedTo(pkg string, edges []Edge, compiled map[string]*fnSites, links []s
 
 // fileSource reads source files from disk.
 type fileSource struct {
-	dir   string
-	lines map[string][]string
-	funcs map[string]map[string]funcInfo // file -> name -> info
-	lits  map[string]map[int]bool        // file -> lines where a func starts
+	dir         string
+	packageDirs map[string]string
+	lines       map[string][]string
+	funcs       map[string]map[string]funcInfo // file -> name -> info
+	lits        map[string]map[int]bool        // file -> lines where a func starts
 }
 
 type funcInfo struct {
@@ -1151,12 +1152,21 @@ type funcInfo struct {
 	deferred []string
 }
 
-func newFileSource(dir string) *fileSource {
-	return &fileSource{dir: dir, lines: map[string][]string{}, funcs: map[string]map[string]funcInfo{}, lits: map[string]map[int]bool{}}
+func newFileSource(dir string, packageDirs map[string]string) *fileSource {
+	return &fileSource{dir: dir, packageDirs: packageDirs, lines: map[string][]string{}, funcs: map[string]map[string]funcInfo{}, lits: map[string]map[int]bool{}}
 }
 
 func (s *fileSource) path(file string) string {
-	if filepath.IsAbs(file) || s.dir == "" {
+	if filepath.IsAbs(file) {
+		return file
+	}
+	// When using -trimpath, the compiler prefixes a source file with its package import path.
+	if lastSlash := strings.LastIndexByte(file, '/'); lastSlash >= 0 {
+		if dir := s.packageDirs[file[:lastSlash]]; dir != "" {
+			return filepath.Join(dir, file[lastSlash+1:])
+		}
+	}
+	if s.dir == "" {
 		return file
 	}
 	return filepath.Join(s.dir, file)
@@ -1460,6 +1470,7 @@ func Check(o checkOptions) (*Report, error) {
 	}
 	var pkgs []Package
 	modules := map[string]bool{}
+	packageDirs := map[string]string{}
 	for _, d := range deps {
 		if d.Error != nil {
 			return nil, fmt.Errorf("package %s: %s", d.ImportPath, d.Error.Err)
@@ -1477,6 +1488,7 @@ func Check(o checkOptions) (*Report, error) {
 			link = "main"
 		}
 		pkgs = append(pkgs, Package{ImportPath: d.ImportPath, Name: d.Name, LinkPath: link})
+		packageDirs[d.ImportPath] = d.Dir
 	}
 	args := []string{"build", "-pgo=" + profile}
 	var mods []string
@@ -1505,7 +1517,7 @@ func Check(o checkOptions) (*Report, error) {
 	if t.Name == "main" {
 		mainPath = t.ImportPath
 	}
-	rep, err := Match(ep, sites, pkgs, mainPath, newFileSource(o.Dir))
+	rep, err := Match(ep, sites, pkgs, mainPath, newFileSource(o.Dir, packageDirs))
 	if err != nil {
 		return nil, err
 	}

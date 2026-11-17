@@ -148,6 +148,32 @@ func TestStaleProfileIsReported(t *testing.T) {
 	}
 }
 
+func TestTrimpathPreservesLostEdges(t *testing.T) {
+	dir := "../examples/ledger/v2"
+	t.Setenv("GOFLAGS", "")
+	normal, errOut, code := check(t, dir, profileV1)
+	if code != 0 {
+		t.Fatalf("without trimpath: exit %d: %s", code, errOut)
+	}
+
+	t.Setenv("GOFLAGS", "-trimpath")
+	trimmed, errOut, code := check(t, dir, profileV1)
+	if code != 0 {
+		t.Fatalf("with trimpath: exit %d: %s", code, errOut)
+	}
+	if len(normal.Lost) == 0 || len(normal.Lost) != len(trimmed.Lost) || normal.Score != trimmed.Score {
+		t.Fatalf("trimpath changed the check: normal=%+v trimmed=%+v", normal, trimmed)
+	}
+	for i, want := range normal.Lost {
+		got := trimmed.Lost[i]
+		// The compiler intentionally reports a different source filename with trimpath.
+		want.Where, got.Where = "", ""
+		if got != want {
+			t.Errorf("lost edge %d with trimpath: got %+v, want %+v", i, got, want)
+		}
+	}
+}
+
 func TestTestBinaryProfile(t *testing.T) {
 	r, _, code := check(t, "../examples/ledger/v1", profileTest, "--fail")
 	if code != 1 {
