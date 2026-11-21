@@ -4,6 +4,11 @@ All notable changes are documented here, in [Keep a Changelog](https://keepachan
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-21
+
+### Fixed
+- Resolve compiler positions from trimpath builds (#11)
+
 ## [0.2.0] - 2026-11-14
 
 ### Added
